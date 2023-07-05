@@ -9,17 +9,11 @@
 simple Game declaration
 **/
 import DE from '@dreamirl/dreamengine';
+import Paralax from './Paralax.js';
+import FallingObjectGenerator from './FallingObjectGenerator.js';
+import { getRandomNumber } from './utils.js';
+
 var Game = {};
-
-function getRandomNumber(min, max) {
-  // Generate a random number between min and max
-  var randomNumber = Math.random() * (max - min) + min;
-
-  // Round the number if needed
-  randomNumber = Math.round(randomNumber);
-
-  return randomNumber;
-}
 
 Game.render = null;
 Game.scene = null;
@@ -65,23 +59,12 @@ Game.onload = function() {
 
   Game.reset = function() {
     Game.score = 0
-    var dup = [...Game.projectils]
-    dup.forEach(projectil => {
-      projectil.removeFromWorld("projectils")
-    });
-    dup = [...Game.shields]
-    dup.forEach(projectil => {
-      projectil.removeFromWorld("shields")
-    });
-    dup = [...Game.chests]
-    dup.forEach(projectil => {
-      projectil.removeFromWorld("chests")
-    });
+    Game.fallingObjectGenerator.reset()
+    Game.fallingObjectGenerator.start()
     Game.state = "running"
     Game.hero.x = 0
     Game.hero.y = 0
     Game.chestTaken = 0
-    Game.projectilGenerator.createProjectil()
     Game.GUI.renderers[1].visible = false
     Game.GUI.renderers[2].visible = false
     Game.restartButton.visible = false
@@ -89,48 +72,7 @@ Game.onload = function() {
     DE.Audio.fx.play("revive")
   }
 
-  Game.bg = new DE.GameObject({
-    axes: { x: 0, y: 0 },
-    zindex: -3,
-    scale: 6,
-    interactive: false,
-    checkInputs: function() {
-      this.x = Game.hero.x * -this.speed
-    },
-    automatisms: [['checkInputs', 'checkInputs']],
-    renderers: [
-      new DE.SpriteRenderer({spriteName: "background_0", y: -380 / 6}),
-    ]    
-  })
-  Game.bg.speed = 0.05
-  Game.bg2 = new DE.GameObject({
-    axes: { x: 0, y: 0 },
-    zindex: -2,
-    scale: 6,
-    interactive: false,
-    checkInputs: function() {
-      this.x = Game.hero.x * -this.speed
-    },
-    automatisms: [['checkInputs', 'checkInputs']],
-    renderers: [
-      new DE.SpriteRenderer({spriteName: "background_1", y: -380 / 6}),
-    ]    
-  })
-  Game.bg2.speed = 0.2
-  Game.bg3 = new DE.GameObject({
-    axes: { x: 0, y: 0 },
-    zindex: -1,
-    scale: 6,
-    interactive: false,
-    checkInputs: function() {
-      this.x = Game.hero.x * -this.speed
-    },
-    automatisms: [['checkInputs', 'checkInputs']],
-    renderers: [
-      new DE.SpriteRenderer({spriteName: "background_2", y: -380 / 6 }),
-    ]    
-  })
-  Game.bg3.speed = 0.4
+  
 
   Game.map = new DE.GameObject({
     renderers: [
@@ -138,6 +80,41 @@ Game.onload = function() {
     ]
   })
   Game.map.border = {x1: -950, x2: 650}
+
+  Game.fallingObjectGenerator = new FallingObjectGenerator({
+    spawnLimitX1: Game.map.border.x1 - (1920 / 2),
+    spawnLimitX2: Game.map.border.x2 + (1920 / 2),
+    delay: 200,
+    //y: -1000, force to move this -1000 directly to falling object else it dosnt calcul correctly world pos (getPos)
+    zindex: 5,
+    fallingObjectsParams: [
+      {
+        name: "shield",
+        proba: 1,
+        spriteRendererParams: { 
+          spriteName: "shield"  
+        }
+      },
+      {
+        name: "chest",
+        proba: 1,
+        spriteRendererParams: { 
+          spriteName: "chest",
+          x: 10,
+        }
+      },
+      {
+        name: "meteor",
+        proba: 28,
+        spriteRendererParams: { 
+          spriteName: "projectil_1",
+          rotation: 1.57,
+          x: 5,
+        }
+      },
+    ]
+  })
+  Game.fallingObjectGenerator.start()
 
   Game.hero = new DE.GameObject({
     x: 0,
@@ -174,15 +151,15 @@ Game.onload = function() {
 
         var v2 = new DE.Vector2(Game.hero.getPos().x, Game.hero.getPos().y, Game.hero)
 
-        Game.shields.forEach(p => {
+        Game.fallingObjectGenerator.getFallingObjectsByCategorie('shield').forEach(p => {
           var v1 = new DE.Vector2(p.getPos().x, p.getPos().y, p)
-          if (v1.isInRangeFrom(v2, 50)){
+          if (v1.isInRangeFrom(v2, 15)){
             Game.hero.shield = true
             p.removeFromWorld("shields")
             Game.hero.renderers[1].visible = true
           }
         })
-        Game.chests.forEach(p => {
+        Game.fallingObjectGenerator.getFallingObjectsByCategorie('chest').forEach(p => {
           var v1 = new DE.Vector2(p.getPos().x, p.getPos().y, p)
           if (v1.isInRangeFrom(v2, 50)){
             Game.score += 2000
@@ -204,9 +181,9 @@ Game.onload = function() {
           }
 
         }
-        Game.projectils.forEach(p => {
+        Game.fallingObjectGenerator.getFallingObjectsByCategorie('meteor').forEach(p => {
           var v1 = new DE.Vector2(p.getPos().x, p.getPos().y, p)
-          if (v1.isInRangeFrom(v2, 50)){
+          if (v1.isInRangeFrom(v2, p.radiusCollision)){
             if (Game.hero.shield === true) {
               Game.hero.shield = false
               Game.hero.renderers[1].visible = false
@@ -218,6 +195,7 @@ Game.onload = function() {
               Game.GUI.renderers[2].visible = true
               Game.hero.changeAnimation("death")
               DE.Audio.fx.play("death")
+              Game.fallingObjectGenerator.stop()
               if ((Game.hightScore || 0) < Game.score) {
                 DE.Save.save('score',  Game.score);
                 Game.hightScore = Game.score
@@ -290,95 +268,6 @@ Game.onload = function() {
     y: -10,
     visible: false
   }))
-
-  Game.projectilGenerator = new DE.GameObject({
-    x: 0,
-    y: -1000,
-  })
-  Game.projectilGenerator.delay = 200
-  Game.projectilGenerator.createProjectil = function() {
-    var random_number = getRandomNumber(0, 30)
-    var projectil = null
-    if (random_number === 0) {
-      projectil = new DE.GameObject({
-        x: getRandomNumber(Game.map.border.x1 - (1920 / 2), Game.map.border.x2 + (1920 / 2)),
-        y: Game.projectilGenerator.y,
-        zindex: 5,
-        renderers: [
-          new DE.SpriteRenderer({spriteName: "chest_idle", scale: 3})
-        ] 
-      })
-      projectil.speed = 10
-      projectil.lifetime = 2000
-      projectil.removeFromWorld = function(categorie) {
-        var indexToRemove = Game[categorie].indexOf(projectil);
-        if (indexToRemove !== -1) {
-          Game[categorie].splice(indexToRemove, 1);
-        }
-        projectil.askToKill()
-      }
-      Game.chests.push(projectil)
-      projectil.addAutomatism('removeFromWorld', 'removeFromWorld', {
-        interval: projectil.lifetime,
-        persistent: false,
-        value1: "chests"
-      });
-    }else if (random_number === 1) {
-      projectil = new DE.GameObject({
-        x: getRandomNumber(Game.map.border.x1 - (1920 / 2), Game.map.border.x2 + (1920 / 2)),
-        y: Game.projectilGenerator.y,
-        zindex: 5,
-        renderers: [
-          new DE.SpriteRenderer({spriteName: "shield", scale: 3})
-        ] 
-      })
-      projectil.speed = 10
-      projectil.lifetime = 2000
-      projectil.removeFromWorld = function(categorie) {
-        var indexToRemove = Game[categorie].indexOf(projectil);
-        if (indexToRemove !== -1) {
-          Game[categorie].splice(indexToRemove, 1);
-        }
-        projectil.askToKill()
-      }
-      Game.shields.push(projectil)
-      projectil.addAutomatism('removeFromWorld', 'removeFromWorld', {
-        interval: projectil.lifetime,
-        persistent: false,
-        value1: "shields"
-      });
-    }else {
-      projectil = new DE.GameObject({
-        x: getRandomNumber(Game.map.border.x1 - (1920 / 2), Game.map.border.x2 + (1920 / 2)),
-        y: Game.projectilGenerator.y,
-        zindex: 5,
-        renderers: [
-          new DE.SpriteRenderer({spriteName: "projectil_1", rotation: 1.57, scale: 3})
-        ] 
-      })
-      projectil.speed = 10
-      projectil.lifetime = 2000
-      projectil.removeFromWorld = function(categorie) {
-        var indexToRemove = Game.projectils.indexOf(projectil);
-        if (indexToRemove !== -1) {
-          Game[categorie].splice(indexToRemove, 1);
-        }
-        projectil.askToKill()
-      }
-      Game.projectils.push(projectil)
-      projectil.addAutomatism('removeFromWorld', 'removeFromWorld', {
-        interval: projectil.lifetime,
-        persistent: false,
-        value1: "projectils"
-      });
-    }
-    projectil.addAutomatism('translateY', 'translateY', { value1: projectil.speed });
-    Game.scene.add(projectil);
-    if (Game.state === "running") {
-      setTimeout(Game.projectilGenerator.createProjectil, Game.projectilGenerator.delay);
-    }
-  }
-  Game.projectilGenerator.createProjectil()
 
   Game.GUI = new DE.GameObject({
     zindex: 10,
@@ -454,13 +343,36 @@ Game.onload = function() {
   Game.GUI.add(Game.restartButton)
   Game.GUI.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
 
+  Game.bg = new Paralax({
+    zindex: -1,
+    panesParams: [
+      {
+        speed: 0.05,
+        spriteRendererParams: {
+          spriteName: "background_0"  
+        }
+      },
+      {
+        speed: 0.2,
+        spriteRendererParams: {
+          spriteName: "background_1"  
+        }
+      },
+      {
+        speed: 0.4,
+        spriteRendererParams: { 
+          spriteName: "background_2"  
+        }
+      },
+    ],
+    ref: Game.hero,
+  })
 
   Game.scene.add(
     Game.bg,
-    Game.bg2,
-    Game.bg3,
     Game.map,
     Game.hero,
+    Game.fallingObjectGenerator,
     Game.GUI,
   );
 

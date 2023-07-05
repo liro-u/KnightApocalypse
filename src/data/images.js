@@ -31,7 +31,7 @@ const images = {
       [ "projectil_2", "projectil/2.png", { "totalFrame": 61, "totalLine": 1, "interval": 10, "animated": true, "loop": true} ],      
       [ "projectil_3", "projectil/3.png", { "totalFrame": 61, "totalLine": 1, "interval": 10, "animated": true, "loop": true} ],   
 
-      [ "chest_idle", "chest/Chests.png", { "totalFrame": 5, "totalLine": 8, "interval": 50, "animated": true, "loop": true} ],      
+      [ "chest", "chest/Chests.png", { "totalFrame": 5, "totalLine": 8, "interval": 50, "animated": true, "loop": true} ],      
       [ "shield", "shield/Icon18.png", { "totalFrame": 1, "totalLine": 1, "animated": false} ],      
       [ "semi_shield", "shield_spell/semi_shield.png", { "totalFrame": 5, "totalLine": 3, "animated": true, "loop": true} ],      
       [ "complete_shield", "shield_spell/complete_shield.png", { "totalFrame": 5, "totalLine": 3, "animated": true, "loop": true} ],      
