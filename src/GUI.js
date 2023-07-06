@@ -1,7 +1,7 @@
 import DE from '@dreamirl/dreamengine';
 
 class GUI extends DE.GameObject {
-    constructor({zindex = 10, onRestart, hightScore = 0, ...otherParams}) {
+    constructor({zindex = 10, ...otherParams}) {
         super({
             zindex: zindex,
             ...otherParams
@@ -74,7 +74,6 @@ class GUI extends DE.GameObject {
         this.addRenderer(this.GameOverLabel)
         this.addRenderer(this.HightScoreLabel)
         this.addRenderer(this.ScoreLabel)
-        this.setHightScore(hightScore)
         this.setScore(0)
     }
     

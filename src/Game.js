@@ -11,16 +11,14 @@ simple Game declaration
 import DE from '@dreamirl/dreamengine';
 import Paralax from './Paralax.js';
 import FallingObjectGenerator from './FallingObjectGenerator.js';
-import { getRandomNumber } from './utils.js';
 import GUI from './GUI.js';
+import Hero from './Hero.js';
+import GameLogic from './GameLogic.js';
 
 var Game = {};
 
 Game.render = null;
 Game.scene = null;
-Game.score = 0
-Game.state = "running"
-Game.chestTaken = 0
 
 // init
 Game.init = function() {
@@ -44,29 +42,45 @@ Game.init = function() {
 
 Game.onload = function() {
   console.log('game start');
-  DE.Audio.fx.play('boss_music');
-
+  
   // scene
   Game.scene = new DE.Scene();
+  DE.Audio.fx.play('boss_music');
 
+  // camera
   Game.camera = new DE.Camera(0, 0, 1920, 1080, {
     scene: Game.scene,
   });
   Game.camera.interactive = true;
   Game.render.add(Game.camera);
 
+  // world aspect
   Game.map = new DE.GameObject({
     renderers: [
       new DE.SpriteRenderer({spriteName: "map", scale: 4, y: -340})
-    ]
+    ],
+    border: {x1: -950, x2: 650}
   })
-  Game.map.border = {x1: -950, x2: 650}
 
+  //GUI
+  Game.GUI = new GUI({})
+
+  // Game Logic
+  Game.Logic = new GameLogic({})
+  Game.Logic.onScoreChanged = (value) => {
+    Game.GUI.setScore(value)
+  }
+  Game.Logic.onHightScoreChanged = (value) => {
+    Game.GUI.setHightScore(value)
+  }
+  Game.Logic.refreshHightScore()
+
+  // Falling object
   Game.fallingObjectGenerator = new FallingObjectGenerator({
     spawnLimitX1: Game.map.border.x1 - (1920 / 2),
     spawnLimitX2: Game.map.border.x2 + (1920 / 2),
     delay: 200,
-    //y: -1000, force to move this -1000 directly to falling object else it dosnt calcul correctly world pos (getPos)
+    //y: -1000, //force to move this -1000 directly to falling object else it dosnt calcul correctly world pos (getPos)
     zindex: 5,
     fallingObjectsParams: [
       {
@@ -95,178 +109,47 @@ Game.onload = function() {
       },
     ]
   })
-  Game.fallingObjectGenerator.start()
 
-  Game.hero = new DE.GameObject({
-    x: 0,
-    y: 0,
+  // Hero
+  Game.hero = new Hero({
     scale: 3,
-    axes: { x: 0, y: 0 },
-    interactive: true,
-    checkInputs: function() {
-      if (Game.state === "running"){
-
-        if (Game.hero.currentAnim === "idle") {
-          switch (Game.hero.inputState) {
-            case "rolling_left":
-              this.axes.x = -this.speed;
-              this.changeAnimation("roll")
-              this.renderers[0].setScale(-1, 1)
-              this.renderers[0].x = -5
-              break
-            case "rolling_right":
-              this.axes.x = this.speed;
-              this.changeAnimation("roll")
-              this.renderers[0].setScale(1, 1)
-              this.renderers[0].x = 5
-              break
-            default:
-              this.axes.x = 0;
-          }
-        }
-        if ((this.axes.x > 0 && this.x < Game.map.border.x2) || (this.axes.x < 0 && this.x > Game.map.border.x1)) {
-          this.translate({ x: this.axes.x * 2, y: this.axes.y * 2 });
-        }
-  
-        
-
-        var v2 = new DE.Vector2(Game.hero.getPos().x, Game.hero.getPos().y, Game.hero)
-
-        Game.fallingObjectGenerator.getFallingObjectsByCategorie('shield').forEach(p => {
-          var v1 = new DE.Vector2(p.getPos().x, p.getPos().y, p)
-          if (v1.isInRangeFrom(v2, 15)){
-            Game.hero.shield = true
-            p.removeFromWorld("shields")
-            Game.hero.renderers[1].visible = true
-          }
-        })
-        Game.fallingObjectGenerator.getFallingObjectsByCategorie('chest').forEach(p => {
-          var v1 = new DE.Vector2(p.getPos().x, p.getPos().y, p)
-          if (v1.isInRangeFrom(v2, 50)){
-            Game.score += 2000
-            DE.trigger( "games-datas", "point_total", 2000 );
-            DE.trigger( "games-datas", "point_total_beginer", 1 );
-            p.removeFromWorld("chests")
-            Game.chestTaken += 1
-          }
-        })
-
-        DE.trigger( "games-datas", "point_total", 1 );
-        DE.trigger( "games-datas", "point_total_beginer", 1 );
-        Game.score += 1
-        Game.GUI.setScore(Game.score);
-        if (Game.score >= 10000) {
-          DE.trigger( "games-datas", "point", 10000 );
-          if (Game.chestTaken === 0){
-            DE.trigger( "games-datas", "point_no_chest", 10000 );
-          }
-
-        }
-        Game.fallingObjectGenerator.getFallingObjectsByCategorie('meteor').forEach(p => {
-          var v1 = new DE.Vector2(p.getPos().x, p.getPos().y, p)
-          if (v1.isInRangeFrom(v2, p.radiusCollision)){
-            if (Game.hero.shield === true) {
-              Game.hero.shield = false
-              Game.hero.renderers[1].visible = false
-              p.removeFromWorld("projectils")
-            }else {
-              Game.state = "gameover"
-              Game.GUI.setGameOver(true)
-              Game.hero.changeAnimation("death")
-              DE.Audio.fx.play("death")
-              Game.fallingObjectGenerator.stop()
-              if ((Game.hightScore || 0) < Game.score) {
-                DE.Save.save('score',  Game.score);
-                Game.hightScore = Game.score
-                Game.GUI.setHightScore(Game.score)
-              }
-            }
-          }
-        });
-      }
-    },
-    automatisms: [['checkInputs', 'checkInputs']],
-  });
-  Game.hero.shield = false
-  Game.hero.speed = 5 
-  Game.hero.currentAnim = "idle"
-  Game.hero.inputState = "none"
-  
-  Game.camera.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
-  Game.hero.createAnimation = function(firstAnimation) {
-    var {currentAnim, nextAnim} = Game.hero.animation[firstAnimation]
-    var newAnimation = new DE.SpriteRenderer({ spriteName: currentAnim, x: 5, y: -25})
-    if (nextAnim !== "none"){
-      newAnimation.onAnimEnd = function() {
-        Game.hero.changeAnimation(nextAnim)
-      } 
-    }else{
-      newAnimation.onAnimEnd = function() {}
-    }
-    return newAnimation; 
-  }
-  Game.hero.changeAnimation = function(newAnimation) {
-    Game.hero.currentAnim = newAnimation
-    var {currentAnim, nextAnim, callback} = Game.hero.animation[newAnimation]
-    if (callback) {
-      callback()
-    }
-    Game.hero.renderers[0].changeSprite(currentAnim)
-    if (nextAnim !== "none"){
-      Game.hero.renderers[0].onAnimEnd = function() {
-        Game.hero.changeAnimation(nextAnim)
-      } 
-    }else{
-      Game.hero.renderers[0].onAnimEnd = function() {}
-    }
-  }
-  Game.hero.armorSound = ["armor_1", "armor_2", "armor_3", "armor_4"]
-  Game.hero.animation = {
-    "idle": {
-      currentAnim: "hero_idle",
-      nextAnim: "idle"
-    },
-    "roll": {
-      currentAnim: "hero_roll",
-      nextAnim: "idle",
-      callback: function() {
-        DE.Audio.fx.play("effort_1")
-        DE.Audio.fx.play(Game.hero.armorSound[getRandomNumber(0, Game.hero.armorSound.length - 1)]);
-      }
-    },
-    "death": {
-      currentAnim: "hero_death",
-      nextAnim: "none"
-    },
-  },
-  Game.hero.addRenderer(Game.hero.createAnimation(Game.hero.currentAnim))
-  Game.hero.addRenderer(new DE.SpriteRenderer({
-    spriteName: "semi_shield",
-    scale: 0.1,
-    rotation: 1.57,
-    y: -10,
-    visible: false
-  }))
-  
-  Game.hightScore = DE.Save.get('score')
-  Game.GUI = new GUI({
-    hightScore: Game.hightScore
+    mapBorder: Game.map.border,
+    shieldRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie("shield"),
+    meteorRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie("meteor"),
+    chestRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie("chest"),
   })
-  Game.reset = function() {
-    Game.score = 0
-    Game.fallingObjectGenerator.reset()
-    Game.fallingObjectGenerator.start()
-    Game.state = "running"
-    Game.hero.x = 0
-    Game.hero.y = 0
-    Game.chestTaken = 0
-    Game.GUI.setGameOver(false)
-    Game.hero.changeAnimation("idle")
-    DE.Audio.fx.play("revive")
+  Game.hero.onDeath = () => {
+    Game.GUI.setGameOver(true)
+    Game.Logic.isActive = false
+    Game.fallingObjectGenerator.stop()
   }
-  Game.GUI.onRestart = Game.reset;
+  Game.hero.onChestPickup = () => {
+    Game.Logic.chestPickup += 1
+    Game.Logic.incrementScore(2000)
+  }
+
+  // Make camera and GUI follow hero
+  Game.camera.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
   Game.GUI.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
 
+  // Reset a game to default params
+  Game.reset = function() {
+    Game.Logic.reset()
+    Game.fallingObjectGenerator.reset()
+    Game.fallingObjectGenerator.start()
+    Game.GUI.setGameOver(false)
+    Game.hero.reset()
+  }
+  Game.reset()
+  // Restart a game
+  Game.restart = () => {
+    Game.hero.revive()
+    Game.reset()
+  }
+  // Link button to restart
+  Game.GUI.onRestart = Game.restart;
+
+  // Parralax background effect
   Game.bg = new Paralax({
     zindex: -1,
     panesParams: [
@@ -292,29 +175,16 @@ Game.onload = function() {
     ref: Game.hero,
   })
 
+  // instance all node
   Game.scene.add(
     Game.bg,
     Game.map,
     Game.hero,
     Game.fallingObjectGenerator,
     Game.GUI,
+    Game.Logic,
   );
 
-  
-
-  // input
-  DE.Inputs.on('keyDown', 'left', function() {
-    Game.hero.inputState = "rolling_left"
-  });
-  DE.Inputs.on('keyDown', 'right', function() {
-    Game.hero.inputState = "rolling_right";
-  });
-  DE.Inputs.on('keyUp', 'right', function() {
-    Game.hero.inputState = "none";
-  });
-  DE.Inputs.on('keyUp', 'left', function() {
-    Game.hero.inputState = "none";
-  });
 };
 
 // just for helping debugging stuff, never do this ;)

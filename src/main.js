@@ -9,7 +9,7 @@ import achievements from 'achievements';
 
 console.log('game main file loaded DREAM_ENGINE is:', DE);
 
-DE.config.DEBUG = true;
+DE.config.DEBUG = false;
 DE.config.DEBUG_LEVEL = 5;
 DE.init({
   onReady: Game.init,
@@ -20,7 +20,7 @@ DE.init({
   images: images,
   achievements: achievements,
   about: {
-    gameName: 'Game Test',
+    gameName: 'Knight Apocalypse',
     namespace: 'noting',
     author: 'Liro_u',
     gameVersion: '0.1',
