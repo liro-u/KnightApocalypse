@@ -42,7 +42,7 @@ Game.init = function() {
 
 Game.onload = function() {
   console.log('game start');
-  
+
   // scene
   Game.scene = new DE.Scene();
   DE.Audio.fx.play('boss_music');
@@ -57,95 +57,105 @@ Game.onload = function() {
   // world aspect
   Game.map = new DE.GameObject({
     renderers: [
-      new DE.SpriteRenderer({spriteName: "map", scale: 4, y: -340})
+      new DE.SpriteRenderer({ spriteName: 'map', scale: 4, y: -340 }),
     ],
-    border: {x1: -950, x2: 650}
-  })
+    border: { x1: -950, x2: 650 },
+  });
 
   //GUI
-  Game.GUI = new GUI({})
+  Game.GUI = new GUI({});
 
   // Game Logic
-  Game.Logic = new GameLogic({})
+  Game.Logic = new GameLogic({});
   Game.Logic.onScoreChanged = (value) => {
-    Game.GUI.setScore(value)
-  }
+    Game.GUI.setScore(value);
+  };
   Game.Logic.onHightScoreChanged = (value) => {
-    Game.GUI.setHightScore(value)
-  }
-  Game.Logic.refreshHightScore()
+    Game.GUI.setHightScore(value);
+  };
+  Game.Logic.refreshHightScore();
 
   // Falling object
   Game.fallingObjectGenerator = new FallingObjectGenerator({
-    spawnLimitX1: Game.map.border.x1 - (1920 / 2),
-    spawnLimitX2: Game.map.border.x2 + (1920 / 2),
+    spawnLimitX1: Game.map.border.x1 - 1920 / 2,
+    spawnLimitX2: Game.map.border.x2 + 1920 / 2,
     delay: 200,
     //y: -1000, //force to move this -1000 directly to falling object else it dosnt calcul correctly world pos (getPos)
     zindex: 5,
     fallingObjectsParams: [
       {
-        name: "shield",
+        name: 'shield',
         proba: 1,
-        spriteRendererParams: { 
-          spriteName: "shield"  
-        }
+        spriteRendererParams: {
+          spriteName: 'shield',
+        },
       },
       {
-        name: "chest",
+        name: 'chest',
         proba: 1,
-        spriteRendererParams: { 
-          spriteName: "chest",
+        spriteRendererParams: {
+          spriteName: 'chest',
           x: 10,
-        }
+        },
       },
       {
-        name: "meteor",
+        name: 'meteor',
         proba: 28,
-        spriteRendererParams: { 
-          spriteName: "projectil_1",
+        spriteRendererParams: {
+          spriteName: 'projectil_1',
           rotation: 1.57,
           x: 5,
-        }
+        },
       },
-    ]
-  })
+    ],
+  });
 
   // Hero
   Game.hero = new Hero({
     scale: 3,
     mapBorder: Game.map.border,
-    shieldRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie("shield"),
-    meteorRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie("meteor"),
-    chestRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie("chest"),
-  })
+    shieldRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie(
+      'shield',
+    ),
+    meteorRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie(
+      'meteor',
+    ),
+    chestRef: Game.fallingObjectGenerator.getFallingObjectsByCategorie('chest'),
+  });
   Game.hero.onDeath = () => {
-    Game.GUI.setGameOver(true)
-    Game.Logic.isActive = false
-    Game.fallingObjectGenerator.stop()
-  }
+    Game.GUI.setGameOver(true);
+    Game.Logic.isActive = false;
+    Game.fallingObjectGenerator.stop();
+  };
   Game.hero.onChestPickup = () => {
-    Game.Logic.chestPickup += 1
-    Game.Logic.incrementScore(2000)
-  }
+    Game.Logic.chestPickup += 1;
+    Game.Logic.incrementScore(2000);
+  };
 
   // Make camera and GUI follow hero
-  Game.camera.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
-  Game.GUI.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
+  Game.camera.focus(Game.hero, {
+    options: { rotation: true },
+    offsets: { x: 0, y: -300 },
+  });
+  Game.GUI.focus(Game.hero, {
+    options: { rotation: true },
+    offsets: { x: 0, y: -300 },
+  });
 
   // Reset a game to default params
   Game.reset = function() {
-    Game.Logic.reset()
-    Game.fallingObjectGenerator.reset()
-    Game.fallingObjectGenerator.start()
-    Game.GUI.setGameOver(false)
-    Game.hero.reset()
-  }
-  Game.reset()
+    Game.Logic.reset();
+    Game.fallingObjectGenerator.reset();
+    Game.fallingObjectGenerator.start();
+    Game.GUI.setGameOver(false);
+    Game.hero.reset();
+  };
+  Game.reset();
   // Restart a game
   Game.restart = () => {
-    Game.hero.revive()
-    Game.reset()
-  }
+    Game.hero.revive();
+    Game.reset();
+  };
   // Link button to restart
   Game.GUI.onRestart = Game.restart;
 
@@ -156,24 +166,24 @@ Game.onload = function() {
       {
         speed: 0.05,
         spriteRendererParams: {
-          spriteName: "background_0"  
-        }
+          spriteName: 'background_0',
+        },
       },
       {
         speed: 0.2,
         spriteRendererParams: {
-          spriteName: "background_1"  
-        }
+          spriteName: 'background_1',
+        },
       },
       {
         speed: 0.4,
-        spriteRendererParams: { 
-          spriteName: "background_2"  
-        }
+        spriteRendererParams: {
+          spriteName: 'background_2',
+        },
       },
     ],
     ref: Game.hero,
-  })
+  });
 
   // instance all node
   Game.scene.add(
@@ -184,7 +194,6 @@ Game.onload = function() {
     Game.GUI,
     Game.Logic,
   );
-
 };
 
 // just for helping debugging stuff, never do this ;)
