@@ -12,14 +12,12 @@ import DE from '@dreamirl/dreamengine';
 import Paralax from './Paralax.js';
 import FallingObjectGenerator from './FallingObjectGenerator.js';
 import { getRandomNumber } from './utils.js';
+import GUI from './GUI.js';
 
 var Game = {};
 
 Game.render = null;
 Game.scene = null;
-Game.projectils = []
-Game.chests = []
-Game.shields = []
 Game.score = 0
 Game.state = "running"
 Game.chestTaken = 0
@@ -56,23 +54,6 @@ Game.onload = function() {
   });
   Game.camera.interactive = true;
   Game.render.add(Game.camera);
-
-  Game.reset = function() {
-    Game.score = 0
-    Game.fallingObjectGenerator.reset()
-    Game.fallingObjectGenerator.start()
-    Game.state = "running"
-    Game.hero.x = 0
-    Game.hero.y = 0
-    Game.chestTaken = 0
-    Game.GUI.renderers[1].visible = false
-    Game.GUI.renderers[2].visible = false
-    Game.restartButton.visible = false
-    Game.hero.changeAnimation("idle")
-    DE.Audio.fx.play("revive")
-  }
-
-  
 
   Game.map = new DE.GameObject({
     renderers: [
@@ -173,7 +154,7 @@ Game.onload = function() {
         DE.trigger( "games-datas", "point_total", 1 );
         DE.trigger( "games-datas", "point_total_beginer", 1 );
         Game.score += 1
-        Game.GUI.renderers[0].text = 'Score: ' + Math.round(Game.score).toString() + "pts";
+        Game.GUI.setScore(Game.score);
         if (Game.score >= 10000) {
           DE.trigger( "games-datas", "point", 10000 );
           if (Game.chestTaken === 0){
@@ -190,16 +171,14 @@ Game.onload = function() {
               p.removeFromWorld("projectils")
             }else {
               Game.state = "gameover"
-              Game.restartButton.visible = true
-              Game.GUI.renderers[1].visible = true
-              Game.GUI.renderers[2].visible = true
+              Game.GUI.setGameOver(true)
               Game.hero.changeAnimation("death")
               DE.Audio.fx.play("death")
               Game.fallingObjectGenerator.stop()
               if ((Game.hightScore || 0) < Game.score) {
                 DE.Save.save('score',  Game.score);
                 Game.hightScore = Game.score
-                Game.GUI.renderers[2].text = 'Hight Score : ' + Math.round(Game.score).toString() + "pts";
+                Game.GUI.setHightScore(Game.score)
               }
             }
           }
@@ -268,79 +247,24 @@ Game.onload = function() {
     y: -10,
     visible: false
   }))
-
-  Game.GUI = new DE.GameObject({
-    zindex: 10,
-    renderers: [
-      new DE.TextRenderer('score: 0', {
-        x: 750,
-        y: 450,
-        textStyle: {
-          fill: 'white',
-          fontSize: 50,
-          fontFamily: 'Snippet, Monaco, monospace',
-          strokeThickness: 1,
-          align: 'right',
-        },
-      }),
-      new DE.TextRenderer('GameOver', {
-        x: 0,
-        y: 0,
-        visible: false,
-        textStyle: {
-          fill: 'white',
-          fontSize: 100,
-          fontFamily: 'Snippet, Monaco, monospace',
-          strokeThickness: 4,
-          align: 'right',
-        },
-      }),
-      new DE.TextRenderer('Hight Score : ', {
-        x: 0,
-        y: 150,
-        visible: false,
-        textStyle: {
-          fill: 'white',
-          fontSize: 60,
-          fontFamily: 'Snippet, Monaco, monospace',
-          strokeThickness: 4,
-          align: 'right',
-        },
-      })
-    ],
-  })
+  
   Game.hightScore = DE.Save.get('score')
-  Game.GUI.renderers[2].text = 'Hight Score : ' + Math.round(Game.hightScore).toString() + "pts";
-  Game.restartButton = new DE.GameObject({
-    x: -750,
-    y: 450,
-    visible: false,
-    zindex: 50,
-    interactive: true,
-    hitArea: new DE.PIXI.Rectangle(-225, -50, 450, 100),
-    cursor: 'pointer',
-    renderers: [
-      new DE.RectRenderer(300, 80, '0xffffff', {
-        lineStyle: [4, '0x000000', 1],
-        fill: true,
-        x: -150,
-        y: -40,
-      }),
-      new DE.TextRenderer('restart', {
-        textStyle: {
-          fill: 'black',
-          fontSize: 35,
-          fontFamily: 'Snippet, Monaco, monospace',
-          strokeThickness: 1,
-          align: 'center',
-        },
-      }),
-    ],
-    pointerup: function() {
-      Game.reset()
-    },
-  });
-  Game.GUI.add(Game.restartButton)
+  Game.GUI = new GUI({
+    hightScore: Game.hightScore
+  })
+  Game.reset = function() {
+    Game.score = 0
+    Game.fallingObjectGenerator.reset()
+    Game.fallingObjectGenerator.start()
+    Game.state = "running"
+    Game.hero.x = 0
+    Game.hero.y = 0
+    Game.chestTaken = 0
+    Game.GUI.setGameOver(false)
+    Game.hero.changeAnimation("idle")
+    DE.Audio.fx.play("revive")
+  }
+  Game.GUI.onRestart = Game.reset;
   Game.GUI.focus(Game.hero, { options: { rotation: true }, offsets: {x: 0, y: -300} });
 
   Game.bg = new Paralax({
@@ -375,6 +299,8 @@ Game.onload = function() {
     Game.fallingObjectGenerator,
     Game.GUI,
   );
+
+  
 
   // input
   DE.Inputs.on('keyDown', 'left', function() {
