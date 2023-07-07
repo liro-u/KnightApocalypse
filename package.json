@@ -1,10 +1,10 @@
 {
-  "name": "game_sample",
-  "version": "1.0.2",
+  "name": "knight_apocalypse",
+  "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "keywords": [],
-  "author": "",
+  "author": "Liro_u",
   "license": "ISC",
   "dependencies": {
     "@dreamirl/dreamengine": "github:dreamirl/dreamengine"
